@@ -207,9 +207,42 @@ function tick(){let now=new Date();let end=new Date();end.setHours(23,59,59,999)
 let faqs=[["Delivery koto din e pabo?","Dhaka te 1-2 din, Dhaka-r baire 2-4 din."],["Cash on Delivery ase?","Ha! Pura Bangladesh e Cash on Delivery. Age taka dite hobe na."],["Return kora jabe?","Ha, 7 diner vitore product e problem thakle return / exchange kora jabe."],["bKash e payment kora jabe?","Ha, bKash / Nagad / Cash - 3 tai hobe."]];
 document.getElementById('faqList').innerHTML=faqs.map((f,i)=>`<div class="bg-white rounded-xl p-3 cursor-pointer faq-item" onclick="this.classList.toggle('faq-open')"><div class="flex justify-between font-bold text-sm"><span>${f[0]}</span><span class="faq-arrow">▼</span></div><div class="faq-body text-sm text-gray-600 pt-1">${f[1]}</div></div>`).join('');
 // Admin - Password ekhon prompt e, code e khola na (change koro)
-function openAdmin(){let pass=prompt('Admin Password dao:');if(pass!=='admin123'){showToast('❌ Password vul');return}document.getElementById('adminModal').classList.remove('hidden');document.getElementById('adminContent').innerHTML=`<p class="text-sm">Total Products: ${PRODUCTS.length} | Points System Active</p><input id="newName" placeholder="Product Name" class="w-full border rounded-xl p-2 mt-2"><input id="newPrice" type="number" placeholder="Price" class="w-full border rounded-xl p-2 mt-2"><input id="newImg" placeholder="Image URL 1" class="w-full border rounded-xl p-2 mt-2"><input id="newImg2" placeholder="Image URL 2 (optional)" class="w-full border rounded-xl p-2 mt-2"><input id="newImg3" placeholder="Image URL 3 (optional)" class="w-full border rounded-xl p-2 mt-2"><button onclick="addProduct()" class="w-full bg-pink-600 text-white py-2 rounded-xl font-bold mt-2">+ Add Product (Local - Temporary)</button><p class="text-xs mt-2 text-red-500">⚠️ Eta sudhu ei device e thakbe. Sthayi vabe add korte GitHub e PRODUCTS list e add koro.</p>`}
+// ===== ADMIN V2.1 - FULL =====
+let allOrders = JSON.parse(localStorage.getItem('uniq_orders')||'[]');
+function openAdmin(){
+  let pass = prompt('Admin Password dao:');
+  if(pass!=='admin123'){showToast('❌ Password vul');return}
+  document.getElementById('adminModal').classList.remove('hidden');
+  showAdminTab('products');
+}
 function closeAdmin(){document.getElementById('adminModal').classList.add('hidden')}
-function addProduct(){let n=document.getElementById('newName').value,p=parseInt(document.getElementById('newPrice').value),im=document.getElementById('newImg').value,im2=document.getElementById('newImg2').value,im3=document.getElementById('newImg3').value;if(!n||!p){showToast('Nam + Dam dao');return}PRODUCTS.unshift({id:Date.now(),name:n,cat:"Fashion",price:p,old:Math.round(p*1.15),stock:50,rating:4.8,badge:"New",isNew:true,emoji:"🛍️",images:[im||"https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800",im2,im3].filter(Boolean)});render();closeAdmin();showToast('✅ Product add hoise (temporary)')}
+function showAdminTab(tab){
+  let html = `<div class="flex gap-2 mb-3">
+    <button onclick="showAdminTab('products')" class="flex-1 py-2 rounded-full font-bold ${tab==='products'?'bg-gray-900 text-white':'bg-gray-100'}">📦 Products</button>
+    <button onclick="showAdminTab('orders')" class="flex-1 py-2 rounded-full font-bold ${tab==='orders'?'bg-gray-900 text-white':'bg-gray-100'}">🧾 Orders</button>
+    <button onclick="showAdminTab('add')" class="flex-1 py-2 rounded-full font-bold ${tab==='add'?'bg-gray-900 text-white':'bg-gray-100'}">➕ Add</button>
+  </div>`;
+  if(tab==='products'){
+    html += `<p class="text-sm mb-2">Total Products: ${PRODUCTS.length}</p>` + PRODUCTS.map(p=>`
+    <div class="flex gap-2 items-center bg-gray-50 p-2 rounded-xl mb-2">
+      <img src="${p.images[0]}" class="w-12 h-12 object-cover rounded-lg">
+      <div class="flex-1"><b class="text-sm">${p.name}</b><br><span class="text-xs">৳${p.price} | Stock: ${p.stock}</span></div>
+      <button onclick="changeStock(${p.id},-1)" class="bg-white border px-2 rounded">-</button>
+      <button onclick="changeStock(${p.id},1)" class="bg-white border px-2 rounded">+</button>
+      <button onclick="deleteProduct(${p.id})" class="bg-red-500 text-white px-2 py-1 rounded-lg text-xs">🗑️ Delete</button>
+    </div>`).join('');
+  }
+  if(tab==='orders'){
+    html += `<p class="text-sm mb-2">Total Orders (ei phone e): ${allOrders.length}</p>` + (allOrders.length? allOrders.map((o,i)=>`<div class="bg-gray-50 p-2 rounded-xl mb-2 text-sm"><b>${o.orderId} - ৳${o.total}</b><br>${o.name} | ${o.phone}<br>${o.address}<br><span class="text-xs">${o.items}</span></div>`).join('') : `<p class="text-center py-4">Ekhono kono order nai 😔<br><span class="text-xs">Google Sheet connect korle sob device theke order dekhba</span></p>`);
+  }
+  if(tab==='add'){
+    html += `<input id="newName" placeholder="Product Name" class="w-full border rounded-xl p-2 mt-1"><input id="newPrice" type="number" placeholder="Price" class="w-full border rounded-xl p-2 mt-2"><input id="newStock" type="number" placeholder="Stock - jemon 50" value="50" class="w-full border rounded-xl p-2 mt-2"><input id="newImg" placeholder="Image URL 1" class="w-full border rounded-xl p-2 mt-2"><input id="newImg2" placeholder="Image URL 2 (optional)" class="w-full border rounded-xl p-2 mt-2"><input id="newImg3" placeholder="Image URL 3 (optional)" class="w-full border rounded-xl p-2 mt-2"><button onclick="addProduct()" class="w-full bg-pink-600 text-white py-2 rounded-xl font-bold mt-2">+ Add Product</button><p class="text-xs mt-2 text-red-500">⚠️ Eta sudhu ei device e thakbe. Sthayi vabe add korte GitHub e PRODUCTS list e add koro.</p>`;
+  }
+  document.getElementById('adminContent').innerHTML = html;
+}
+function deleteProduct(id){ if(!confirm('Delete korba?'))return; PRODUCTS = PRODUCTS.filter(x=>x.id!==id); render(); showAdminTab('products'); showToast('🗑️ Delete hoise'); }
+function changeStock(id,d){ let p=PRODUCTS.find(x=>x.id===id); p.stock=Math.max(0,p.stock+d); render(); showAdminTab('products'); }
+function addProduct(){ let n=document.getElementById('newName').value, p=parseInt(document.getElementById('newPrice').value), s=parseInt(document.getElementById('newStock').value||'50'), im=document.getElementById('newImg').value, im2=document.getElementById('newImg2').value, im3=document.getElementById('newImg3').value; if(!n||!p){showToast('Nam + Dam dao');return} PRODUCTS.unshift({id:Date.now(),name:n,cat:"Fashion",price:p,old:Math.round(p*1.15),stock:s,rating:4.8,badge:"New",isNew:true,emoji:"🛍️",images:[im||"https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800",im2,im3].filter(Boolean)}); render(); showAdminTab('products'); showToast('✅ Product add hoise'); }
 renderCats();render();
 </script>
 </body>
